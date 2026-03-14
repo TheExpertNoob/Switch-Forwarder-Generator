@@ -1,0 +1,13 @@
+# Build output
+nca/
+nsp/
+control_nca/
+hacpack_backup/
+hacpack_temp/
+keys.dat
+ncasig2_private.pem
+ncasig2_modulus.bin
+
+# Windows noise
+Thumbs.db
+desktop.ini

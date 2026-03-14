@@ -1,0 +1,91 @@
+name: Build Forwarder NSP
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup hacpack and keys
+        run: |
+          echo "${{ secrets.HACPACK_KEYS }}" > keys.dat
+
+          chmod +x tools/hacpack
+
+      - name: Prepare NSP build directories
+        run: |
+          mkdir -p nca nsp control_romfs
+          
+      - name: Generate control romfs
+        run: python3 tools/generate_control.py icon.jpg control_romfs/
+
+      - name: Build Control NCA
+        run: |
+          HACPACK_FLAGS="-k ./keys.dat \
+            -o ./nca/ \
+            --type nca \
+            --plaintext \
+            --ncatype control \
+            --titleid 01DABBED00020000 \
+            --romfsdir ./control_romfs/"
+          tools/hacpack $HACPACK_FLAGS
+
+          # Record control NCA name before program NCA is added
+          CONTROL_NCA=$(ls nca/ | grep "\.nca$" | head -1)
+          echo "CONTROL_NCA=$CONTROL_NCA" >> $GITHUB_ENV
+
+      - name: Build Program NCA
+        run: |
+          HACPACK_FLAGS="-k ./keys.dat \
+            -o ./nca/ \
+            --type nca \
+            --plaintext \
+            --ncatype program \
+            --titleid 01DABBED00020000 \
+            --exefsdir ./exefs/ \
+            --romfsdir ./romfs/ \
+            --logodir ./logo/"
+          tools/hacpack $HACPACK_FLAGS
+
+          PROGRAM_NCA=$(ls nca/ | grep -v "${{ env.CONTROL_NCA }}" | grep "\.nca$" | head -1)
+          echo "PROGRAM_NCA=$PROGRAM_NCA" >> $GITHUB_ENV
+
+      - name: Build Meta NCA
+        run: |
+          tools/hacpack \
+            -k ./keys.dat \
+            -o ./nca/ \
+            --type nca \
+            --plaintext \
+            --ncatype meta \
+            --titletype application \
+            --titleid 01DABBED00020000 \
+            --programnca ./nca/${{ env.PROGRAM_NCA }} \
+            --controlnca ./nca/${{ env.CONTROL_NCA }}
+
+      - name: Build NSP
+        run: |
+          tools/hacpack \
+            -k ./keys.dat \
+            -o ./nsp/ \
+            --type nsp \
+            --ncadir ./nca/ \
+            --titleid 01DABBED00020000
+
+      - name: Cleanup sensitive files
+        if: always()
+        run: rm -f keys.dat
+
+      - name: Rename NSP
+        run: mv nsp/01dabbed00020000.nsp "nsp/forwarder"
+
+      - name: Upload NSP
+        uses: actions/upload-artifact@v4
+        with:
+          name: Installer-nsp
+          path: nsp/*
