@@ -13,6 +13,9 @@ set PYTHON=python
 set KEYS=%ROOT%keys.dat
 
 set TITLE_ID=01DABBED00020000
+set KEYGEN=21
+set SDK_VER=15040000
+set SYS_VER=21.2.0
 
 :: ─────────────────────────────────────────────────────────────────────────────
 :: Sanity checks
@@ -51,7 +54,8 @@ echo [2/5] Building Control NCA...
     -k "%KEYS%" ^
     -o "%ROOT%nca" ^
     --type nca ^
-    --plaintext ^
+    --keygeneration %KEYGEN% ^
+	--sdkversion %SDK_VER% ^
     --ncatype control ^
     --titleid %TITLE_ID% ^
     --romfsdir "%ROOT%control_romfs"
@@ -74,7 +78,8 @@ echo [3/5] Building Program NCA...
     -k "%KEYS%" ^
     -o "%ROOT%nca" ^
     --type nca ^
-    --plaintext ^
+    --keygeneration %KEYGEN% ^
+	--sdkversion %SDK_VER% ^
     --ncatype program ^
     --titleid %TITLE_ID% ^
     --exefsdir "%ROOT%exefs" ^
@@ -101,10 +106,12 @@ echo [4/5] Building Meta NCA...
     -k "%KEYS%" ^
     -o "%ROOT%nca" ^
     --type nca ^
-    --plaintext ^
+    --keygeneration %KEYGEN% ^
+	--sdkversion %SDK_VER% ^
     --ncatype meta ^
     --titletype application ^
     --titleid %TITLE_ID% ^
+	--requiredsystemversion %SYS_VER% ^
     --programnca "%ROOT%nca\!PROGRAM_NCA!" ^
     --controlnca "%ROOT%nca\!CONTROL_NCA!"
 if errorlevel 1 ( echo ERROR: Meta NCA build failed & goto :fail )
