@@ -7,6 +7,8 @@ hacpack_temp/
 keys.dat
 ncasig2_private.pem
 ncasig2_modulus.bin
+acid_private.pem
+ncasig1_private.pem
 
 # Windows noise
 Thumbs.db

@@ -17,6 +17,12 @@ set KEYGEN=21
 set SDK_VER=15040000
 set SYS_VER=21.2.0
 
+:: Optional signing keys — presence determines whether flags are added
+set ACID_KEY=%ROOT%acid_private.pem
+set NCASIG1_KEY=%ROOT%ncasig1_private.pem
+set NCASIG2_KEY=%ROOT%ncasig2_private.pem
+set NCASIG2_MOD=%ROOT%ncasig2_modulus.bin
+
 :: ─────────────────────────────────────────────────────────────────────────────
 :: Sanity checks
 :: ─────────────────────────────────────────────────────────────────────────────
@@ -50,18 +56,13 @@ if errorlevel 1 ( echo ERROR: generate_control.py failed & goto :fail )
 echo.
 echo [2/5] Building Control NCA...
 
-"%HACPACK%" ^
-    -k "%KEYS%" ^
-    -o "%ROOT%nca" ^
-    --type nca ^
-    --keygeneration %KEYGEN% ^
-	--sdkversion %SDK_VER% ^
-    --ncatype control ^
-    --titleid %TITLE_ID% ^
-    --romfsdir "%ROOT%control_romfs"
+set FLAGS= -k "%KEYS%" -o "%ROOT%nca" --type nca --keygeneration %KEYGEN% --sdkversion %SDK_VER% --ncatype control --titleid %TITLE_ID% --romfsdir "%ROOT%control_romfs"
+if exist "%ACID_KEY%"   set FLAGS=!FLAGS! --acidsigprivatekey "%ACID_KEY%"
+if exist "%NCASIG1_KEY%" set FLAGS=!FLAGS! --ncasig1privatekey "%NCASIG1_KEY%"
+
+"%HACPACK%" !FLAGS!
 if errorlevel 1 ( echo ERROR: Control NCA build failed & goto :fail )
 
-:: Capture the control NCA filename before the program NCA is added
 set CONTROL_NCA=
 for %%F in ("%ROOT%nca\*.nca") do set CONTROL_NCA=%%~nxF
 if "!CONTROL_NCA!"=="" ( echo ERROR: No NCA found after control build & goto :fail )
@@ -74,20 +75,17 @@ echo   Control NCA: !CONTROL_NCA!
 echo.
 echo [3/5] Building Program NCA...
 
-"%HACPACK%" ^
-    -k "%KEYS%" ^
-    -o "%ROOT%nca" ^
-    --type nca ^
-    --keygeneration %KEYGEN% ^
-	--sdkversion %SDK_VER% ^
-    --ncatype program ^
-    --titleid %TITLE_ID% ^
-    --exefsdir "%ROOT%exefs" ^
-    --romfsdir "%ROOT%romfs" ^
-    --logodir "%ROOT%logo"
+set FLAGS= -k "%KEYS%" -o "%ROOT%nca" --type nca --keygeneration %KEYGEN% --sdkversion %SDK_VER% --ncatype program --titleid %TITLE_ID% --exefsdir "%ROOT%exefs" --romfsdir "%ROOT%romfs" --logodir "%ROOT%logo"
+if exist "%NCASIG2_KEY%" (
+    set FLAGS=!FLAGS! --ncasig2privatekey "%NCASIG2_KEY%"
+    if exist "%NCASIG2_MOD%" set FLAGS=!FLAGS! --ncasig2modulus "%NCASIG2_MOD%"
+)
+if exist "%ACID_KEY%"    set FLAGS=!FLAGS! --acidsigprivatekey "%ACID_KEY%"
+if exist "%NCASIG1_KEY%" set FLAGS=!FLAGS! --ncasig1privatekey "%NCASIG1_KEY%"
+
+"%HACPACK%" !FLAGS!
 if errorlevel 1 ( echo ERROR: Program NCA build failed & goto :fail )
 
-:: Capture the program NCA — it's whichever .nca is NOT the control NCA
 set PROGRAM_NCA=
 for %%F in ("%ROOT%nca\*.nca") do (
     if not "%%~nxF"=="!CONTROL_NCA!" set PROGRAM_NCA=%%~nxF
@@ -102,18 +100,11 @@ echo   Program NCA: !PROGRAM_NCA!
 echo.
 echo [4/5] Building Meta NCA...
 
-"%HACPACK%" ^
-    -k "%KEYS%" ^
-    -o "%ROOT%nca" ^
-    --type nca ^
-    --keygeneration %KEYGEN% ^
-	--sdkversion %SDK_VER% ^
-    --ncatype meta ^
-    --titletype application ^
-    --titleid %TITLE_ID% ^
-	--requiredsystemversion %SYS_VER% ^
-    --programnca "%ROOT%nca\!PROGRAM_NCA!" ^
-    --controlnca "%ROOT%nca\!CONTROL_NCA!"
+set FLAGS= -k "%KEYS%" -o "%ROOT%nca" --type nca --keygeneration %KEYGEN% --sdkversion %SDK_VER% --ncatype meta --titletype application --titleid %TITLE_ID% --requiredsystemversion %SYS_VER% --programnca "%ROOT%nca\!PROGRAM_NCA!" --controlnca "%ROOT%nca\!CONTROL_NCA!"
+if exist "%ACID_KEY%"    set FLAGS=!FLAGS! --acidsigprivatekey "%ACID_KEY%"
+if exist "%NCASIG1_KEY%" set FLAGS=!FLAGS! --ncasig1privatekey "%NCASIG1_KEY%"
+
+"%HACPACK%" !FLAGS!
 if errorlevel 1 ( echo ERROR: Meta NCA build failed & goto :fail )
 
 :: ─────────────────────────────────────────────────────────────────────────────
@@ -123,45 +114,34 @@ if errorlevel 1 ( echo ERROR: Meta NCA build failed & goto :fail )
 echo.
 echo [5/5] Building NSP...
 
-"%HACPACK%" ^
-    -k "%KEYS%" ^
-    -o "%ROOT%nsp" ^
-    --type nsp ^
-    --ncadir "%ROOT%nca" ^
-    --titleid %TITLE_ID%
+"%HACPACK%" -k "%KEYS%" -o "%ROOT%nsp" --type nsp --ncadir "%ROOT%nca" --titleid %TITLE_ID%
 if errorlevel 1 ( echo ERROR: NSP build failed & goto :fail )
 
-:: Rename to friendly name matching the Actions workflow
 set NSP_IN=%ROOT%nsp\%TITLE_ID%.nsp
-
-if exist "%NSP_IN%" (
-    ren "%NSP_IN%" "forwarder"
-)
+if exist "%NSP_IN%" ren "%NSP_IN%" "forwarder"
 
 :: ─────────────────────────────────────────────────────────────────────────────
-:: Cleanup sensitive derived file
+:: Cleanup
 :: ─────────────────────────────────────────────────────────────────────────────
 
-if exist "%ROOT%control_romfs"     rmdir /s /q "%ROOT%control_romfs"
-if exist "%ROOT%nca"               rmdir /s /q "%ROOT%nca"
-if exist "%ROOT%hacpack_backup"    rmdir /s /q "%ROOT%hacpack_backup"
-if exist "%ROOT%hacpack_temp"      rmdir /s /q "%ROOT%hacpack_temp"
+if exist "%ROOT%control_romfs"  rmdir /s /q "%ROOT%control_romfs"
+if exist "%ROOT%nca"            rmdir /s /q "%ROOT%nca"
+if exist "%ROOT%hacpack_backup" rmdir /s /q "%ROOT%hacpack_backup"
+if exist "%ROOT%hacpack_temp"   rmdir /s /q "%ROOT%hacpack_temp"
 
 echo.
 echo ---------------------------------------------------------
-echo  Build complete.
-echo  NSP: nsp\forwarder
+echo  Build complete.  NSP: nsp\forwarder
 echo ---------------------------------------------------------
 goto :end
 
 :fail
 echo.
 echo Build failed. See error above.
-:: Still clean up derived sensitive material even on failure
-if exist "%ROOT%control_romfs"     rmdir /s /q "%ROOT%control_romfs"
-if exist "%ROOT%nca"               rmdir /s /q "%ROOT%nca"
-if exist "%ROOT%hacpack_backup"    rmdir /s /q "%ROOT%hacpack_backup"
-if exist "%ROOT%hacpack_temp"      rmdir /s /q "%ROOT%hacpack_temp"
+if exist "%ROOT%control_romfs"  rmdir /s /q "%ROOT%control_romfs"
+if exist "%ROOT%nca"            rmdir /s /q "%ROOT%nca"
+if exist "%ROOT%hacpack_backup" rmdir /s /q "%ROOT%hacpack_backup"
+if exist "%ROOT%hacpack_temp"   rmdir /s /q "%ROOT%hacpack_temp"
 exit /b 1
 
 :end
