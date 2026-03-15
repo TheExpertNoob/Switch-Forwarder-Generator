@@ -94,7 +94,7 @@ jobs:
 
       - name: Build Meta NCA
         run: |
-            HACPACK_FLAGS="-k ./keys.dat \
+          HACPACK_FLAGS="-k ./keys.dat \
             -o ./nca/ \
             --type nca \
             --keygeneration 21 \
@@ -102,6 +102,7 @@ jobs:
             --ncatype meta \
             --titletype application \
             --titleid 01DABBED00020000 \
+            --requiredsystemversion 21.2.0 \
             --programnca ./nca/${{ env.PROGRAM_NCA }} \
             --controlnca ./nca/${{ env.CONTROL_NCA }}"
             
