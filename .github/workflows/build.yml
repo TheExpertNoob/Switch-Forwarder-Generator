@@ -49,10 +49,7 @@ jobs:
             --ncatype control \
             --titleid 01DABBED00020000 \
             --romfsdir ./control_romfs/"
-                    
-          if [ -f acid_private.pem ]; then
-            HACPACK_FLAGS="$HACPACK_FLAGS --acidsigprivatekey ./acid_private.pem"
-          fi
+
           if [ -f ncasig1_private.pem ]; then
             HACPACK_FLAGS="$HACPACK_FLAGS --ncasig1privatekey ./ncasig1_private.pem"
           fi
@@ -105,10 +102,7 @@ jobs:
             --requiredsystemversion 21.2.0 \
             --programnca ./nca/${{ env.PROGRAM_NCA }} \
             --controlnca ./nca/${{ env.CONTROL_NCA }}"
-            
-          if [ -f acid_private.pem ]; then
-            HACPACK_FLAGS="$HACPACK_FLAGS --acidsigprivatekey ./acid_private.pem"
-          fi
+
           if [ -f ncasig1_private.pem ]; then
             HACPACK_FLAGS="$HACPACK_FLAGS --ncasig1privatekey ./ncasig1_private.pem"
           fi

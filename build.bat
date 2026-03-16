@@ -75,7 +75,6 @@ echo.
 echo [3/6] Building Control NCA...
 
 set FLAGS= -k "%KEYS%" -o "%ROOT%nca" --type nca --keygeneration %KEYGEN% --sdkversion %SDK_VER% --ncatype control --titleid %TITLE_ID% --romfsdir "%ROOT%control_romfs"
-if exist "%ACID_KEY%"   set FLAGS=!FLAGS! --acidsigprivatekey "%ACID_KEY%"
 if exist "%NCASIG1_KEY%" set FLAGS=!FLAGS! --ncasig1privatekey "%NCASIG1_KEY%"
 
 "%HACPACK%" !FLAGS!
@@ -119,7 +118,6 @@ echo.
 echo [5/6] Building Meta NCA...
 
 set FLAGS= -k "%KEYS%" -o "%ROOT%nca" --type nca --keygeneration %KEYGEN% --sdkversion %SDK_VER% --ncatype meta --titletype application --titleid %TITLE_ID% --requiredsystemversion %SYS_VER% --programnca "%ROOT%nca\!PROGRAM_NCA!" --controlnca "%ROOT%nca\!CONTROL_NCA!"
-if exist "%ACID_KEY%"    set FLAGS=!FLAGS! --acidsigprivatekey "%ACID_KEY%"
 if exist "%NCASIG1_KEY%" set FLAGS=!FLAGS! --ncasig1privatekey "%NCASIG1_KEY%"
 
 "%HACPACK%" !FLAGS!
